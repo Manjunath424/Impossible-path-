@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Impossible Paths</title>
+
+<!-- ============================ -->
+<!-- 1. STYLES                    -->
+<!-- ============================ -->
+<style>
+:root{
+  --bg:#0f1226; --ink:#e9ecff; --mute:#8f96c4;
+  --beam:#3b4a86; --beamTop:#6174c9;
+  --gold:#ffd166; --glow:#7cf5c9; --sw:#ff8a5c; --bad:#ff5d73;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+
+@media (prefers-color-scheme:light){
+  :root:not([data-theme="dark"]){
+    --bg:#f1f0ff; --ink:#1c1f3d; --mute:#5b6090;
+    --beam:#8e9be0; --beamTop:#5666c4;
+    --gold:#e0a100; --glow:#0fae83; --sw:#e0562a; --bad:#d92b45;
+  }
+}
+
+:root[data-theme="dark"]{--bg:#0f1226}
+
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+  display:flex; flex-direction:column; align-items:center;
+  user-select:none; -webkit-user-select:none;
+  overflow:hidden;
+}
+
+header{width:100%;max-width:560px;padding:14px 16px 2px}
+h1{font-size:18px;margin:0}
+#info{font-size:13px;color:var(--mute);margin-top:2px}
+#msg{min-height:20px;font-size:13px;color:var(--glow);margin:2px 12px;text-align:center}
+
+canvas{
+  flex:1; width:100%; max-width:560px; min-height:0;
+  touch-action:none; cursor:grab;
+}
+
+.ctl{
+  width:100%; max-width:560px; padding:8px 16px 16px;
+  color:var(--mute); font-size:12px; text-align:center;
+}
+
+input[type=range]{width:100%;accent-color:var(--glow);margin:6px 0}
+
+button{
+  background:var(--glow); color:#0f1226; border:0;
+  border-radius:10px; padding:10px 18px;
+  font-size:15px; font-weight:600; cursor:pointer;
+  min-height:44px;
+}
+
+button.g{
+  background:transparent; color:var(--mute);
+  border:1px solid var(--mute); font-size:12px;
+  padding:8px 12px; margin-top:4px; min-height:38px;
+}
+
+button:disabled{opacity:.35;cursor:not-allowed}
+
+/* ---------- Screens ---------- */
+.screen{
+  position:fixed; inset:0; z-index:50;
+  display:none; flex-direction:column;
+  align-items:center; justify-content:center;
+  gap:18px; text-align:center; padding:28px;
+  background:
+    radial-gradient(circle at 50% 20%,rgba(124,245,201,.14),transparent 55%),
+    var(--bg);
+  color:var(--ink);
+}
+
+.screen.on{display:flex}
+
+.logo{
+  font-size:52px; line-height:1; color:var(--glow);
+  text-shadow:0 0 28px rgba(124,245,201,.55);
+}
+
+.title{font-size:34px;font-weight:800;margin:0;letter-spacing:-.5px}
+.sub{max-width:420px;color:var(--mute);font-size:15px;line-height:1.5}
+
+.big{
+  background:linear-gradient(135deg,var(--glow),#4fd1ff);
+  color:#06131a; border:0; border-radius:16px;
+  padding:16px 34px; font-size:18px; font-weight:800;
+  cursor:pointer; box-shadow:0 12px 34px rgba(124,245,201,.28);
+}
+
+.big:active{transform:scale(.97)}
+
+.card{
+  width:100%; max-width:380px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(143,150,196,.35);
+  border-radius:18px; padding:20px;
+  display:flex; flex-direction:column; gap:12px;
+}
+
+.card input[type=email]{
+  width:100%; padding:12px; border-radius:12px;
+  border:1px solid var(--mute); background:transparent;
+  color:var(--ink); font-size:15px;
+}
+
+.consent{
+  display:flex; gap:8px; align-items:flex-start;
+  text-align:left; font-size:12px; color:var(--mute);
+}
+
+.ghost{
+  background:transparent; border:1px solid var(--mute);
+  color:var(--mute); border-radius:12px;
+  padding:12px 16px; font-size:14px; cursor:pointer;
+}
+
+.badge{
+  font-size:12px; color:var(--glow);
+  border:1px solid rgba(124,245,201,.4);
+  padding:5px 10px; border-radius:999px;
+}
+
+#acct{
+  width:100%; max-width:560px; padding:6px 16px;
+  font-size:12px; color:var(--mute); text-align:center;
+}
+
+#acct label{display:block;margin:4px 0}
+#acct button{font-size:13px;padding:6px 12px;margin-top:4px}
+
+#win,#pause{
+  position:fixed; inset:0;
+  background:rgba(10,12,30,.88);
+  display:none; flex-direction:column;
+  align-items:center; justify-content:center;
+  gap:14px; text-align:center; padding:24px; color:#fff;
+  z-index:60;
+}
+
+#win.on,#pause.on{display:flex}
+
+#win h2{margin:0;font-size:26px}
+#win p{margin:0;color:#c3c8f0}
+
+.stars{font-size:34px;letter-spacing:6px;color:var(--gold)}
+.star-off{opacity:.22}
+
+#hintBtn{
+  border-color:var(--gold);
+  color:var(--gold);
+}
+</style>
+</head>
+
+<body>
+
+<!-- ============================ -->
+<!-- 2. INTRO SCREEN              -->
+<!-- ============================ -->
+<div id="intro" class="screen on">
+  <div class="logo">◇</div>
+
+  <h1 class="title">Impossible Paths</h1>
+
+  <p class="sub">
+    Rotate impossible bridges, reveal hidden routes, press switches,
+    and guide the glowing traveler to the golden star.
+  </p>
+
+  <div class="badge">100 illusion levels · Play in order</div>
+
+  <button id="playBtn" class="big">▶ Play</button>
+
+  <p class="sub" style="font-size:12px">
+    Drag to rotate · Tap a tile to walk
+  </p>
+</div>
+
+<!-- ============================ -->
+<!-- 3. LOGIN SCREEN              -->
+<!-- ============================ -->
+<div id="login" class="screen">
+  <div class="logo">◇</div>
+
+  <h2 class="title" style="font-size:26px">Save your journey</h2>
+
+  <div class="card">
+    <input
+      id="loginEmail"
+      type="email"
+      placeholder="name@gmail.com"
+      autocomplete="email"
+    >
+
+    <label class="consent">
+      <input id="loginConsent" type="checkbox">
+      <span>
+        I agree to share my Gmail address and gameplay progress
+        with the game creator to improve the game.
+      </span>
+    </label>
+
+    <button id="loginBtn" class="big">Continue</button>
+    <button id="guestBtn" class="ghost">Continue as guest</button>
+  </div>
+
+  <p class="sub" style="font-size:12px">
+    Guest progress is saved only on this device.
+  </p>
+</div>
+
+<!-- ============================ -->
+<!-- 4. GAME UI                   -->
+<!-- ============================ -->
+<header>
+  <h1>◇ Impossible Paths</h1>
+  <div id="info"></div>
+</header>
+
+<div id="acct"></div>
+<div id="msg"></div>
+
+<canvas id="c"></canvas>
+
+<div class="ctl">
+  <input
+    id="rot"
+    type="range"
+    min="-3.14"
+    max="3.14"
+    step="0.005"
+    value="0"
+    aria-label="Rotate world"
+  >
+
+  Drag or slide to rotate. Tap a tile to walk.
+
+  <div>
+    <button class="g" id="backBtn">⌂ Back</button>
+    <button class="g" id="pauseBtn">⏸ Pause</button>
+    <button class="g" id="hintBtn">💡 Hint</button>
+  </div>
+
+  <div>
+    <button class="g" id="pv">◀ Prev</button>
+    <button class="g" id="rs">Restart</button>
+    <button class="g" id="nx2">Next ▶</button>
+  </div>
+</div>
+
+<!-- ============================ -->
+<!-- 5. PAUSE SCREEN              -->
+<!-- ============================ -->
+<div id="pause" class="screen">
+  <div class="logo">⏸</div>
+  <h2 class="title" style="font-size:26px">Paused</h2>
+
+  <div class="card">
+    <button id="resumeBtn" class="big">▶ Resume</button>
+    <button id="restartFromPause" class="ghost">Restart level</button>
+    <button id="homeFromPause" class="ghost">⌂ Back to home</button>
+  </div>
+</div>
+
+<!-- ============================ -->
+<!-- 6. WIN SCREEN                -->
+<!-- ============================ -->
+<div id="win">
+  <h2 id="wt">Solved!</h2>
+  <div id="starRow" class="stars"></div>
+  <p id="wp"></p>
+  <button id="nb">Next level</button>
+</div>
+
+<!-- ============================ -->
+<!-- 7. GAME SCRIPT               -->
+<!-- ============================ -->
+<script>
+const T=Math.PI/6,C=Math.cos(T),S=Math.sin(T);
+
+const off=(p,a,dy)=>{
+  const d=dy*C/S;
+  return[p[0]-d*Math.sin(a),p[1]+dy,p[2]+d*Math.cos(a)]
+};
+
+function mk(name,hint,steps,mv){
+  const n=[[0,0,0]],e=[];
+  let c=0,sw=-1;
+
+  for(const s of steps){
+    const p=n[c],t=s[0];
+    let q;
+
+    if(t=='l'){
+      q=off(p,s[1],s[2]);
+      n.push(q);
+      e.push([c,n.length-1,1]);
+      c=n.length-1;
+    }else{
+      q=[p[0]+s[1],p[1],p[2]+s[2]];
+      n.push(q);
+
+      const k=n.length-1;
+
+      e.push(
+        t=='g'?[c,k,2,s[3]]:
+        t=='d'?[c,k,3]:
+        [c,k]
+      );
+
+      if(t=='s')sw=k;
+      else c=k;
+    }
+  }
+
+  return{name,hint,n,e,s:0,g:c,sw,mv}
+}
+
+const lv=[
+  mk('The Gap','Rotate until the gap closes, then tap the star.',[
+    ['r',2,0],['l',.8,1],['r',0,-2],['r',-2,0]
+  ]),
+
+  mk('Two Bridges','Two gaps, two different angles.',[
+    ['r',0,2],['l',-.7,1],['r',2,0],['l',.9,-1],['r',0,2]
+  ]),
+
+  mk('Staircase of Lies','Links go up and down. Chain them.',[
+    ['r',2,0],['l',.5,1],['r',0,2],['l',-.9,1],['r',-2,0],['l',1.3,-2],['r',0,-2]
+  ]),
+
+  mk('Side View','Dashed paths only exist when seen from the right side.',[
+    ['r',2,0],['g',0,2,-1],['l',.6,1],['r',2,0]
+  ]),
+
+  mk('The Switch','Step on the orange pad, come back, then use the door.',[
+    ['s',0,2],['d',2,0],['l',.7,1],['r',0,-2]
+  ]),
+
+  mk('Heartbeat','The far island floats up and down. Time your link.',[
+    ['r',2,0],['l',.6,1],['r',0,-2],['l',-.8,-1],['r',-2,0]
+  ],{f:2,a:.7,s:2}),
+
+  mk('Penrose Loop','Four links in a row.',[
+    ['l',.5,1],['r',2,0],['l',-.6,1],['r',0,2],['l',.9,1],['r',-2,0],['l',-.4,1],['r',0,-2]
+  ]),
+
+  mk('Ghost Bridges','Combine side views and illusion links.',[
+    ['r',2,0],['g',0,2,.9],['l',-.6,1],['g',2,0,-.5],['l',1.1,-1],['r',0,2]
+  ]),
+
+  mk('Press and Wait','Switch first, then catch the floating island.',[
+    ['s',0,2],['d',2,0],['l',.7,1],['r',0,-2],['l',-.8,-1],['r',-2,0]
+  ],{f:3,a:.6,s:2}),
+
+  mk('Grand Illusion','Everything at once. Good luck.',[
+    ['s',-2,0],['r',0,2],['g',2,0,.8],['l',-.9,1],['d',0,2],['l',.5,1],['r',2,0],['l',-1.2,-1],['r',0,-2]
+  ],{f:6,a:.6,s:1.8})
+];
+
+function rng(s){
+  return()=>{
+    s|=0;
+    s=s+0x6D2B79F5|0;
+    let t=Math.imul(s^s>>>15,1|s);
+    t=t+Math.imul(t^t>>>7,61|t)^t;
+    return((t^t>>>14)>>>0)/4294967296
+  }
+}
+
+const D=[[2,0],[-2,0],[0,2],[0,-2]];
+const TN=['Warm-up','Twist','Locked','Floating','Mind-bender'];
+const TH=[
+  'Chain the links.',
+  'Some paths only appear from the right side.',
+  'Find the switch before the door.',
+  'Islands float. Time your link.',
+  'Everything at once.'
+];
+
+function gen(i){
+  const r=rng(i*7919+13);
+  const t=Math.min(5,1+(((i-11)/18)|0));
+  const st=[];
+  let cnt=1,prev=-1,mv,hasSw=false,doorAt=-1;
+
+  const nseg=2+t+((r()*3)|0);
+
+  if(t>=3&&r()<.75){
+    st.push(['s',...D[(r()*4)|0]]);
+    cnt++;
+    hasSw=true;
+    doorAt=1+((r()*(nseg-1))|0);
+  }
+
+  const dir=()=>{
+    let k;
+    do{k=(r()*4)|0}while(k===(prev^1));
+    prev=k;
+    return D[k]
+  };
+
+  for(let j=0;j<nseg;j++){
+    const x=r();
+
+    if(j===doorAt){
+      st.push(['d',...dir()]);
+      cnt++;
+    }
+    else if(t>=2&&x<.22){
+      const a=(.4+r()*.9)*(r()<.5?-1:1);
+      st.push(['g',...dir(),a]);
+      cnt++;
+    }
+    else if(x<.7){
+      const dys=t>=4?[1,-1,2,-2]:[1,-1,1];
+      st.push(['l',(r()*2-1)*1.4,dys[(r()*dys.length)|0]]);
+      cnt++;
+
+      if(t>=4&&!mv&&r()<.5){
+        mv={f:cnt-1,a:.5+r()*.3,s:1.6+r()*.8}
+      }
+    }
+    else{
+      st.push(['r',...dir()]);
+      cnt++;
+    }
+  }
+
+  if(hasSw&&doorAt<0)st.push(['d',...dir()]);
+
+  if(!st.some(s=>s[0]=='l')){
+    st.push(['l',(r()*2-1)*1.2,1])
+  }
+
+  st.push(['r',...dir()]);
+
+  return mk(TN[t-1]+' '+i,TH[t-1],st,mv)
+}
+
+for(let i=11;i<=100;i++)lv.push(gen(i));
+
+/* ---------- DOM ---------- */
+const cv=document.getElementById('c');
+const x=cv.getContext('2d');
+const sl=document.getElementById('rot');
+const acct=document.getElementById('acct');
+const msg=document.getElementById('msg');
+const pv=document.getElementById('pv');
+const nx2=document.getElementById('nx2');
+const pauseBtn=document.getElementById('pauseBtn');
+const hintBtn=document.getElementById('hintBtn');
+const intro=document.getElementById('intro');
+const login=document.getElementById('login');
+const pauseScreen=document.getElementById('pause');
+const winScreen=document.getElementById('win');
+
+/* ---------- State ---------- */
+let t0=0,tries=0,base=100,W,H,sc,L=0,lvl,ctr,rot=0,moves=0;
+let pl,done=false,msgT=0,pressed=false,tm=0;
+let paused=false,hintsUsed=0,badFlash=0;
+let unlocked=Number(localStorage.getItem('ip_unlocked')||1);
+
+const particles=[];
+const trail=[];
+
+function saveUnlocked(){
+  localStorage.setItem('ip_unlocked',String(unlocked));
+}
+
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+/* ---------- Sound ---------- */
+let audioCtx=null;
+
+function sound(type){
+  try{
+    if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+
+    const o=audioCtx.createOscillator();
+    const g=audioCtx.createGain();
+
+    o.connect(g);
+    g.connect(audioCtx.destination);
+
+    const now=audioCtx.currentTime;
+
+    if(type==='move'){
+      o.type='sine';o.frequency.setValueAtTime(520,now);
+      o.frequency.exponentialRampToValueAtTime(760,now+.08);
+      g.gain.setValueAtTime(.08,now);
+      g.gain.exponentialRampToValueAtTime(.001,now+.12);
+      o.start(now);o.stop(now+.13);
+    }
+
+    if(type==='bad'){
+      o.type='sawtooth';o.frequency.setValueAtTime(180,now);
+      o.frequency.exponentialRampToValueAtTime(90,now+.18);
+      g.gain.setValueAtTime(.07,now);
+      g.gain.exponentialRampToValueAtTime(.001,now+.2);
+      o.start(now);o.stop(now+.21);
+    }
+
+    if(type==='switch'){
+      o.type='square';o.frequency.setValueAtTime(320,now);
+      o.frequency.exponentialRampToValueAtTime(660,now+.1);
+      g.gain.setValueAtTime(.08,now);
+      g.gain.exponentialRampToValueAtTime(.001,now+.18);
+      o.start(now);o.stop(now+.19);
+    }
+
+    if(type==='win'){
+      o.type='triangle';
+      o.frequency.setValueAtTime(523,now);
+      o.frequency.setValueAtTime(659,now+.1);
+      o.frequency.setValueAtTime(784,now+.2);
+      g.gain.setValueAtTime(.1,now);
+      g.gain.exponentialRampToValueAtTime(.001,now+.55);
+      o.start(now);o.stop(now+.6);
+    }
+  }catch(e){}
+}
+
+/* ---------- Particles ---------- */
+function burst(px,py,color,count=18,power=3){
+  for(let i=0;i<count;i++){
+    const a=Math.random()*Math.PI*2;
+    const sp=Math.random()*power+.6;
+
+    particles.push({
+      x:px,y:py,
+      vx:Math.cos(a)*sp,
+      vy:Math.sin(a)*sp,
+      life:1,
+      color
+    });
+  }
+}
+
+/* ---------- Layout ---------- */
+function size(){
+  const r=cv.getBoundingClientRect(),d=devicePixelRatio||1;
+  W=r.width;H=r.height;
+  cv.width=W*d;cv.height=H*d;
+  x.setTransform(d,0,0,d,0,0);
+  base=Math.min(W,H)/6.2;
+  fit();
+}
+
+addEventListener('resize',size);
+
+function fit(){
+  if(!lvl)return sc=base;
+
+  let R=0,Y=0;
+
+  lvl.n.forEach(p=>{
+    R=Math.max(R,Math.hypot(p[0]-ctr[0],p[2]-ctr[2]));
+    Y=Math.max(Y,Math.abs(p[1]-ctr[1]));
+  });
+
+  sc=Math.min(base,Math.min(W,H)*.45/(R+Y*.6+.5));
+}
+
+function updateNav(){
+  pv.disabled=L===0;
+  nx2.disabled=L+1>=unlocked||L+1>=lv.length;
+  nx2.textContent=L+1>=lv.length?'Finished ✓':'Next ▶';
+}
+
+function load(i){
+  L=Math.max(0,Math.min(lv.length-1,i));
+
+  if(L+1>unlocked){
+    say('Complete the current level to unlock the next one.');
+    L=unlocked-1;
+  }
+
+  lvl=lv[L];
+  ctr=[0,1,2].map(k=>lvl.n.reduce((a,p)=>a+p[k],0)/lvl.n.length);
+
+  rot=0;
+  sl.value=0;
+  moves=0;
+  done=false;
+  pressed=false;
+  hintsUsed=0;
+  badFlash=0;
+  pl={node:lvl.s,path:[],prog:0};
+  trail.length=0;
+  particles.length=0;
+
+  fit();
+  t0=performance.now();
+  tries=0;
+
+  winScreen.classList.remove('on');
+  info();
+  say(lvl.hint);
+  updateNav();
+}
+
+function info(){
+  document.getElementById('info').textContent=
+    'Level '+(L+1)+'/'+lv.length+' · '+lvl.name+' · Moves '+moves;
+}
+
+function say(t){
+  msg.textContent=t;
+  msgT=performance.now();
+}
+
+function pt(i){
+  const p=lvl.n[i],m=lvl.mv;
+  const y=m&&i>=m.f?p[1]+m.a*Math.sin(tm*m.s):p[1];
+
+  const a=p[0]-ctr[0],b=y-ctr[1],z=p[2]-ctr[2];
+  const c=Math.cos(rot),s=Math.sin(rot);
+
+  return[
+    W/2+(a*c+z*s)*sc,
+    H/2+(-b*C+S*(-a*s+z*c))*sc
+  ]
+}
+
+const angd=a=>Math.abs(Math.atan2(Math.sin(rot-a),Math.cos(rot-a)));
+
+function active(e){
+  const t=e[2];
+
+  if(!t)return true;
+
+  if(t==1){
+    const a=pt(e[0]),b=pt(e[1]);
+    return Math.hypot(a[0]-b[0],a[1]-b[1])<sc*.2
+  }
+
+  return t==2?angd(e[3])<.3:pressed
+}
+
+function bfs(a,b){
+  const q=[[a]],seen={[a]:1};
+
+  while(q.length){
+    const p=q.shift(),u=p[p.length-1];
+
+    if(u===b)return p.slice(1);
+
+    for(const e of lvl.e){
+      if(!active(e))continue;
+
+      const v=
+        e[0]===u?e[1]:
+        e[1]===u?e[0]:-1;
+
+      if(v>=0&&!seen[v]){
+        seen[v]=1;
+        q.push([...p,v])
+      }
+    }
+  }
+
+  return null
+}
+
+function tap(px,py){
+  if(done||pl.path.length||paused)return;
+
+  let best=-1,bd=sc*.6;
+
+  lvl.n.forEach((p,i)=>{
+    const q=pt(i),d=Math.hypot(q[0]-px,q[1]-py);
+    if(d<bd){bd=d;best=i}
+  });
+
+  if(best<0||best===pl.node)return;
+
+  const path=bfs(pl.node,best);
+
+  if(!path){
+    tries++;
+    badFlash=1;
+    sound('bad');
+
+    const q=pt(pl.node);
+    burst(q[0],q[1],css('--bad'),10,2);
+
+    say('No path from here. Change the view or find a trick.');
+    return
+  }
+
+  pl.path=path;
+  pl.prog=0;
+  moves++;
+  sound('move');
+  info();
+}
+
+/* ---------- Hint ---------- */
+hintBtn.onclick=()=>{
+  if(done||paused)return;
+
+  const path=bfs(pl.node,lvl.g);
+
+  if(!path){
+    say('No hint available from this position. Rotate the world.');
+    return
+  }
+
+  hintsUsed++;
+  pl.path=[path[0]];
+  pl.prog=0;
+
+  say('Hint: move to the highlighted tile.');
+  sound('switch');
+};
+
+/* ---------- Input ---------- */
+let dn=null;
+
+cv.addEventListener('pointerdown',e=>{
+  cv.setPointerCapture(e.pointerId);
+  dn={x:e.clientX,r:rot,m:false};
+});
+
+cv.addEventListener('pointermove',e=>{
+  if(!dn)return;
+
+  const dx=e.clientX-dn.x;
+
+  if(Math.abs(dx)>6)dn.m=true;
+
+  if(dn.m){
+    rot=dn.r+dx*.01;
+    rot=((rot+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;
+    sl.value=rot;
+  }
+});
+
+cv.addEventListener('pointerup',e=>{
+  if(dn&&!dn.m){
+    const r=cv.getBoundingClientRect();
+    tap(e.clientX-r.left,e.clientY-r.top);
+  }
+  dn=null;
+});
+
+sl.addEventListener('input',()=>rot=parseFloat(sl.value));
+
+addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft'){
+    rot=Math.max(-3.14,rot-.05);
+    sl.value=rot;
+  }
+
+  if(e.key==='ArrowRight'){
+    rot=Math.min(3.14,rot+.05);
+    sl.value=rot;
+  }
+});
+
+/* ---------- Navigation ---------- */
+document.getElementById('nb').onclick=()=>load(L+1);
+pv.onclick=()=>load(L-1);
+
+nx2.onclick=()=>{
+  if(L+1<unlocked)load(L+1);
+};
+
+document.getElementById('rs').onclick=()=>load(L);
+
+/* ---------- Pause + Back ---------- */
+function setPause(state){
+  paused=state;
+  pauseScreen.classList.toggle('on',paused);
+  pauseBtn.textContent=paused?'▶ Resume':'⏸ Pause';
+}
+
+pauseBtn.onclick=()=>setPause(!paused);
+document.getElementById('resumeBtn').onclick=()=>setPause(false);
+
+document.getElementById('restartFromPause').onclick=()=>{
+  setPause(false);
+  load(L);
+};
+
+document.getElementById('homeFromPause').onclick=()=>{
+  setPause(false);
+  intro.classList.add('on');
+  login.classList.remove('on');
+};
+
+document.getElementById('backBtn').onclick=()=>{
+  intro.classList.add('on');
+  login.classList.remove('on');
+};
+
+/* ---------- Drawing helpers ---------- */
+function star(cx,cy,r){
+  x.beginPath();
+
+  for(let i=0;i<10;i++){
+    const a=-Math.PI/2+i*Math.PI/5;
+    const R=i%2?r*.45:r;
+    x.lineTo(cx+Math.cos(a)*R,cy+Math.sin(a)*R);
+  }
+
+  x.closePath();
+  x.fill();
+}
+
+function beamLine(a,b,col,w,dy){
+  x.strokeStyle=col;
+  x.lineWidth=w;
+  x.beginPath();
+  x.moveTo(a[0],a[1]+dy);
+  x.lineTo(b[0],b[1]+dy);
+  x.stroke();
+}
+
+/* ---------- Main loop ---------- */
+let last=performance.now();
+
+function frame(t){
+  const dt=Math.min(.05,(t-last)/1000);
+  last=t;
+
+  if(!paused)tm+=dt;
+
+  if(msgT&&t-msgT>3500){
+    msg.textContent='';
+    msgT=0;
+  }
+
+  if(badFlash>0)badFlash=Math.max(0,badFlash-dt*2.5);
+
+  if(!paused&&pl.path.length){
+    pl.prog+=dt*2.6;
+
+    if(pl.prog>=1){
+      pl.node=pl.path.shift();
+      pl.prog=0;
+
+      if(pl.node===lvl.sw&&!pressed){
+        pressed=true;
+        sound('switch');
+
+        const q=pt(pl.node);
+        burst(q[0],q[1],css('--sw'),22,3);
+
+        say('Switch pressed. A door opened.');
+      }
+
+      if(pl.node===lvl.g&&!pl.path.length){
+        done=true;
+        sound('win');
+
+        const q=pt(pl.node);
+        burst(q[0],q[1],css('--gold'),45,5);
+
+        record(L,moves,Math.round((performance.now()-t0)/1000));
+
+        const lastLevel=L===lv.length-1;
+
+        setTimeout(()=>{
+          const stars=hintsUsed===0?(moves<=6?3:2):1;
+
+          document.getElementById('wt').textContent=
+            lastLevel?'All 100 illusions solved!':'Solved!';
+
+          document.getElementById('starRow').innerHTML=
+            '<span>'+'★'.repeat(stars)+'</span>'+
+            '<span class="star-off">'+'★'.repeat(3-stars)+'</span>';
+
+          document.getElementById('wp').textContent=
+            lvl.name+' in '+moves+' moves'+
+            (hintsUsed?' · '+hintsUsed+' hint'+(hintsUsed>1?'s':''):'');
+
+          document.getElementById('nb').textContent=
+            lastLevel?'Play again':'Next level';
+
+          winScreen.classList.add('on');
+          updateNav();
+        },500);
+      }
+    }
+  }
+
+  x.clearRect(0,0,W,H);
+
+  const beam=css('--beam'),top=css('--beamTop');
+  const glow=css('--glow'),gold=css('--gold');
+  const ink=css('--ink'),swc=css('--sw'),bad=css('--bad');
+
+  x.lineCap='round';
+
+  /* Beams */
+  for(const e of lvl.e){
+    const a=pt(e[0]),b=pt(e[1]);
+    const ty=e[2]||0,on=active(e);
+
+    if(ty==1){
+      if(on){
+        x.strokeStyle=glow;
+        x.lineWidth=sc*.2;
+        x.globalAlpha=.55;
+        x.beginPath();
+        x.arc((a[0]+b[0])/2,(a[1]+b[1])/2,sc*.3,0,7);
+        x.stroke();
+        x.globalAlpha=1;
+      }
+      continue;
+    }
+
+    if(!on){
+      x.setLineDash([sc*.15,sc*.2]);
+      x.globalAlpha=.4;
+      beamLine(a,b,ty==3?swc:top,sc*.2,0);
+      x.setLineDash([]);
+      x.globalAlpha=1;
+      continue;
+    }
+
+    beamLine(a,b,beam,sc*.42,sc*.08);
+    beamLine(a,b,ty==3?swc:top,sc*.34,0);
+  }
+
+  /* Nodes */
+  lvl.n.forEach((p,i)=>{
+    const q=pt(i);
+
+    x.fillStyle=i===lvl.sw?(pressed?glow:swc):top;
+    x.beginPath();
+    x.arc(q[0],q[1],sc*.24,0,7);
+    x.fill();
+
+    x.strokeStyle=ink;
+    x.globalAlpha=.35;
+    x.lineWidth=2;
+    x.stroke();
+    x.globalAlpha=1;
+
+    if(i===lvl.g){
+      x.fillStyle=gold;
+      star(q[0],q[1]-sc*.05,sc*.28);
+    }
+  });
+
+  /* Player trail */
+  if(!paused){
+    const pp=pt(pl.node);
+    trail.push({x:pp[0],y:pp[1]-sc*.22,life:1});
+
+    if(trail.length>26)trail.shift();
+  }
+
+  trail.forEach(p=>{
+    p.life-=dt*1.4;
+
+    if(p.life>0){
+      x.globalAlpha=p.life*.45;
+      x.fillStyle=glow;
+      x.beginPath();
+      x.arc(p.x,p.y,sc*.09*p.life,0,7);
+      x.fill();
+    }
+  });
+
+  x.globalAlpha=1;
+
+  /* Player */
+  let pp=pt(pl.node);
+
+  if(pl.path.length){
+    const n=pt(pl.path[0]);
+
+    pp=[
+      pp[0]+(n[0]-pp[0])*pl.prog,
+      pp[1]+(n[1]-pp[1])*pl.prog
+    ];
+  }
+
+  x.shadowColor=glow;
+  x.shadowBlur=18;
+  x.fillStyle=glow;
+  x.beginPath();
+  x.arc(pp[0],pp[1]-sc*.22,sc*.14,0,7);
+  x.fill();
+  x.shadowBlur=0;
+
+  /* Particles */
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
+
+    if(!paused){
+      p.x+=p.vx;
+      p.y+=p.vy;
+      p.vy+=.06;
+      p.life-=dt*1.5;
+    }
+
+    if(p.life<=0){
+      particles.splice(i,1);
+      continue;
+    }
+
+    x.globalAlpha=Math.max(0,p.life);
+    x.fillStyle=p.color;
+    x.beginPath();
+    x.arc(p.x,p.y,sc*.06,0,7);
+    x.fill();
+  }
+
+  x.globalAlpha=1;
+
+  /* Invalid-path flash */
+  if(badFlash>0){
+    x.globalAlpha=badFlash*.25;
+    x.fillStyle=bad;
+    x.fillRect(0,0,W,H);
+    x.globalAlpha=1;
+  }
+
+  requestAnimationFrame(frame);
+}
+</script>
+
+<!-- ============================ -->
+<!-- 8. ACCOUNT + PROGRESS        -->
+<!-- ============================ -->
+<script>
+let verified=true,db=null,uid=null,gmail='',consent=false,saved={};
+
+try{
+  saved=JSON.parse(localStorage.getItem('ip_done')||'{}');
+}catch(e){}
+
+function localSave(){
+  try{
+    localStorage.setItem('ip_done',JSON.stringify(saved));
+  }catch(e){}
+}
+
+function manual(){
+  acct.textContent='';
+
+  const p=document.createElement('div');
+  p.textContent='Optional: enter your Gmail to save progress. It could not be verified automatically, so it is recorded as unverified.';
+  acct.appendChild(p);
+
+  const inp=document.createElement('input');
+  inp.type='email';
+  inp.placeholder='name@gmail.com';
+  inp.style.cssText='margin:4px;padding:6px;border-radius:8px;border:1px solid var(--mute);background:transparent;color:var(--ink)';
+  acct.appendChild(inp);
+
+  const lb=document.createElement('label');
+  const cb=document.createElement('input');
+  cb.type='checkbox';
+
+  lb.appendChild(cb);
+  lb.appendChild(document.createTextNode(' I agree to share my Gmail address and gameplay results with the game creator to improve the game.'));
+  acct.appendChild(lb);
+
+  const b=document.createElement('button');
+  b.textContent='Save my progress';
+
+  b.onclick=async()=>{
+    const em=inp.value.trim().toLowerCase();
+
+    if(!/^[a-z0-9.]+@gmail\.com$/.test(em)){
+      say('Please enter a valid @gmail.com address.');
+      return;
+    }
+
+    if(!cb.checked){
+      say('Please tick the consent box first.');
+      return;
+    }
+
+    gmail=em;
+    consent=true;
+    verified=false;
+
+    await push();
+    ui('Gmail noted (unverified): '+gmail+' · progress is being recorded.',false);
+  };
+
+  acct.appendChild(b);
+}
+
+function ui(msgText,withBtn){
+  acct.textContent='';
+
+  const p=document.createElement('div');
+  p.textContent=msgText;
+  acct.appendChild(p);
+
+  if(withBtn){
+    const lb=document.createElement('label');
+    const cb=document.createElement('input');
+
+    cb.type='checkbox';
+    cb.checked=consent;
+
+    lb.appendChild(cb);
+    lb.appendChild(document.createTextNode(' I agree to share my Gmail address and gameplay results with the game creator to improve the game.'));
+    acct.appendChild(lb);
+
+    const b=document.createElement('button');
+    b.textContent='Save my progress';
+
+    b.onclick=async()=>{
+      if(!cb.checked){
+        say('Please tick the consent box first.');
+        return;
+      }
+
+      consent=true;
+      await push();
+      ui('Verified Gmail: '+gmail+' · progress is being recorded.',false);
+    };
+
+    acct.appendChild(b);
+  }
+}
+
+async function init(){
+  if(typeof claude==='undefined'){
+    ui('Guest mode: progress is saved on this device only.');
+    return;
+  }
+
+  try{
+    const u=await claude.use('user');
+    db=await claude.use('db');
+
+    if(!u||!db){
+      ui('Guest mode: progress is saved on this device only.');
+      return;
+    }
+
+    const m=await u.me();
+    uid=m.id;
+
+    const em=(m.email||'').trim().toLowerCase();
+
+    if(uid&&/^[a-z0-9.]+@gmail\.com$/.test(em)){
+      gmail=em;
+
+      const s=await db.doc('players/'+uid).get();
+      const d=s.exists?(typeof s.data==='function'?s.data():s.data):null;
+
+      if(d&&d.consent){
+        consent=true;
+        Object.assign(saved,d.levels||{});
+        localSave();
+        ui('Verified Gmail: '+gmail+' · progress is being recorded.',false);
+      }else{
+        ui('Verified Gmail found: '+gmail+'.',true);
+      }
+    }
+    else if(uid){
+      manual();
+    }
+    else{
+      ui('Guest mode: progress is saved on this device only.');
+    }
+  }
+  catch(e){
+    ui('Guest mode: progress is saved on this device only.');
+  }
+}
+
+let busy=Promise.resolve();
+
+function push(){
+  busy=busy.then(async()=>{
+    if(!db||!uid||!gmail||!consent)return;
+
+    try{
+      await db.doc('players/'+uid).set({
+        email:gmail,
+        gmailVerified:verified,
+        consent:true,
+        levels:saved,
+        updated:new Date().toISOString()
+      });
+    }catch(e){}
+  });
+
+  return busy;
+}
+
+function record(i,mv,sec){
+  const k=String(i+1);
+  const o=saved[k]||{plays:0};
+
+  const best=o.bestMoves?Math.min(o.bestMoves,mv):mv;
+  const stars=hintsUsed===0?(mv<=6?3:2):1;
+  const bestStars=o.bestStars?Math.max(o.bestStars,stars):stars;
+
+  saved[k]={
+    plays:(o.plays||0)+1,
+    bestMoves:best,
+    bestStars,
+    lastMoves:mv,
+    lastSeconds:sec,
+    rotations:tries,
+    hintsUsed
+  };
+
+  if(i+2>unlocked&&i+2<=lv.length){
+    unlocked=i+2;
+    saveUnlocked();
+  }
+
+  localSave();
+  push();
+}
+
+/* ============================ */
+/* 9. START FLOW                */
+/* ============================ */
+document.getElementById('playBtn').onclick=()=>{
+  intro.classList.remove('on');
+  login.classList.add('on');
+};
+
+document.getElementById('guestBtn').onclick=()=>{
+  login.classList.remove('on');
+  size();
+  load(Math.min(unlocked-1,lv.length-1));
+  init();
+  requestAnimationFrame(frame);
+};
+
+document.getElementById('loginBtn').onclick=()=>{
+  const em=document.getElementById('loginEmail').value.trim().toLowerCase();
+  const ok=/^[a-z0-9.]+@gmail\.com$/.test(em);
+
+  if(!ok){
+    alert('Please enter a valid Gmail address.');
+    return;
+  }
+
+  if(!document.getElementById('loginConsent').checked){
+    alert('Please accept the consent checkbox.');
+    return;
+  }
+
+  gmail=em;
+  consent=true;
+  verified=false;
+
+  login.classList.remove('on');
+  size();
+  load(Math.min(unlocked-1,lv.length-1));
+  init();
+  requestAnimationFrame(frame);
+  push();
+};
+
+requestAnimationFrame(frame);
+</script>
+
+</body>
+</html>
